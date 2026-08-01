@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#176b87">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="训练打卡">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <title>居家训练打卡</title>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div><p class="eyebrow">居家增肌 · 关节保护</p><h1>训练打卡</h1></div>
+      <button id="settingsButton" class="icon-button" aria-label="设置">⚙</button>
+    </header>
+
+    <section class="stage-card" aria-live="polite">
+      <div class="stage-heading"><span id="stageBadge">阶段 1</span><span id="dayText" class="muted"></span></div>
+      <h2 id="stageTitle">适应与打基础</h2>
+      <p id="stageDescription"></p>
+      <div class="progress-row"><div class="progress"><i id="progressFill"></i></div><strong id="progressText"></strong></div>
+      <p id="unlockText" class="hint"></p>
+    </section>
+
+    <section class="today-card">
+      <div class="section-title"><div><p class="eyebrow">今天的训练</p><h2 id="workoutTitle"></h2></div><span id="doneTag" class="done-tag" hidden>已完成</span></div>
+      <p id="workoutTip" class="workout-tip"></p>
+      <div id="checklist" class="checklist"></div>
+      <button id="completeButton" class="primary" disabled>完成并记录本次训练</button>
+      <button id="restButton" class="text-button">今天只做恢复 / 休息</button>
+    </section>
+
+    <section class="stats-card">
+      <div class="section-title"><div><p class="eyebrow">本阶段进度</p><h2>训练记录</h2></div><button id="historyButton" class="small-button">查看历史</button></div>
+      <div class="stats"><div><strong id="totalWorkouts">0</strong><span>完成训练</span></div><div><strong id="weeksElapsed">0</strong><span>已持续周数</span></div><div><strong id="streak">0</strong><span>连续训练日</span></div></div>
+    </section>
+
+    <section class="install-note"><strong>在 iPhone 上使用：</strong>Safari 打开此页面后，点“分享”→“添加到主屏幕”。首次联网打开后可离线使用。</section>
+  </main>
+
+  <dialog id="settingsDialog"><form method="dialog" class="dialog-content">
+    <div class="section-title"><h2>计划设置</h2><button class="icon-button" value="cancel" aria-label="关闭">×</button></div>
+    <label>计划开始日期<input id="startDate" type="date"></label>
+    <p class="hint">阶段 1：至少持续 8 周且完成 20 次训练；阶段 2：至少持续 16 周且完成 48 次训练。达标后会自动解锁。</p>
+    <button id="saveSettings" class="primary" value="default">保存设置</button>
+    <button id="resetButton" type="button" class="danger">清除全部打卡记录</button>
+  </form></dialog>
+
+  <dialog id="historyDialog"><form method="dialog" class="dialog-content">
+    <div class="section-title"><h2>训练历史</h2><button class="icon-button" value="cancel" aria-label="关闭">×</button></div>
+    <div id="historyList" class="history-list"></div>
+  </form></dialog>
+  <script src="app.js"></script>
+</body>
+</html>

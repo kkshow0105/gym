@@ -56,6 +56,36 @@
     <div class="section-title"><h2>训练历史</h2><button class="icon-button" value="cancel" aria-label="关闭">×</button></div>
     <div id="historyList" class="history-list"></div>
   </form></dialog>
+
+  <dialog id="timerDialog" class="timer-dialog">
+    <div class="dialog-content timer-content">
+      <div class="section-title timer-header"><div><p class="eyebrow">声音训练指导</p><h2 id="timerTitle"></h2></div><button id="timerCloseButton" class="icon-button" type="button" aria-label="关闭">×</button></div>
+
+      <div id="timerSetup" class="timer-setup">
+        <label id="timerChoiceLabel" hidden>选择本次动作<select id="timerChoice"></select></label>
+        <div class="timer-fields">
+          <label><span id="timerSetsText">组数</span><input id="timerSets" type="number" min="1" max="10" inputmode="numeric"></label>
+          <label id="timerRepsLabel">每组次数<input id="timerReps" type="number" min="1" max="50" inputmode="numeric"></label>
+          <label id="timerWorkLabel" hidden><span id="timerWorkText">每组秒数</span><input id="timerWork" type="number" min="5" max="3600" inputmode="numeric"></label>
+          <label>休息秒数<input id="timerRest" type="number" min="0" max="300" inputmode="numeric"></label>
+        </div>
+        <p id="timerSetupHint" class="hint timer-hint"></p>
+        <button id="timerStartButton" class="primary" type="button">开始声音指导</button>
+      </div>
+
+      <div id="timerRunning" class="timer-running" hidden aria-live="polite">
+        <p id="timerPhase" class="timer-phase">准备开始</p>
+        <strong id="timerCountdown" class="timer-countdown">0</strong>
+        <p id="timerMeta" class="timer-meta"></p>
+        <div class="timer-progress" aria-hidden="true"><i id="timerProgressFill"></i></div>
+        <p id="timerNotice" class="hint timer-notice">请保持页面停留在前台，训练时会尝试保持屏幕常亮。</p>
+        <div class="timer-actions">
+          <button id="timerPauseButton" class="primary" type="button">暂停</button>
+          <button id="timerStopButton" class="small-button timer-stop" type="button">提前结束</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
   <script src="app.js"></script>
 </body>
 </html>

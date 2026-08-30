@@ -123,7 +123,8 @@ function streak(records){let c=0,d=new Date(today()+'T12:00');const set=new Set(
 function complete(){const {phase,isTraining,type}=activePlan;data.history.push({date:today(),type:isTraining?'workout':'rest',phase:phase.id,workout:isTraining?type:null});data.draft={};save();update()}
 function history(){const list=$('historyList');list.innerHTML=data.history.length?data.history.slice().reverse().map(x=>`<div class="history-item"><strong>${formatDate(x.date)} · ${x.type==='workout'?`阶段 ${x.phase} ${x.workout} 训练`:'恢复 / 休息'}</strong><span>${x.type==='workout'?'已完成全部训练项目':'未计入阶段训练次数'}</span></div>`).join(''):'<p class="hint">还没有记录。完成今天的所有项目后，会显示在这里。</p>';$('historyDialog').showModal()}
 
-let timerSetup=null,timerSession=null,audioContext=null,wakeLock=null;
+let timerSetup=null,timerSession=null,audioContext=null,wakeLock=null,speechVoices=[],speechGeneration=0;
+const speechUtterances=new Set(),speechTimers=new Set();
 
 function selectedTimerConfig(){
  const base=timerSetup.item[2];
@@ -136,6 +137,7 @@ function timerChoiceName(){
 }
 function openTimer(item,key,checkbox,label,draftId){
  timerSetup={item,key,checkbox,label,draftId};
+ prepareSpeech();
  const pref=data.timerPrefs[key]||{},base=item[2];
  $('timerTitle').textContent=item[0];$('timerSetup').hidden=false;$('timerRunning').hidden=true;
  $('timerChoiceLabel').hidden=base.mode!=='choice';$('timerChoice').innerHTML='';
@@ -211,6 +213,32 @@ async function prepareAudio(){
  if(AudioCtor&&!audioContext)audioContext=new AudioCtor();
  if(audioContext?.state==='suspended')await audioContext.resume().catch(()=>{});
 }
+function updateSpeechVoices(){
+ if(!('speechSynthesis' in window))return [];
+ speechVoices=window.speechSynthesis.getVoices();
+ return speechVoices;
+}
+function preferredChineseVoice(){
+ const voices=updateSpeechVoices();
+ return voices.find(voice=>voice.lang.toLowerCase()==='zh-cn')||voices.find(voice=>voice.lang.toLowerCase().startsWith('zh'))||null;
+}
+function prepareSpeech(timeout=900){
+ if(!('speechSynthesis' in window))return Promise.resolve();
+ const synth=window.speechSynthesis;synth.resume();
+ if(updateSpeechVoices().length)return Promise.resolve();
+ return new Promise(resolve=>{
+  let timer;
+  const done=()=>{clearTimeout(timer);synth.removeEventListener?.('voiceschanged',changed);updateSpeechVoices();resolve()};
+  const changed=()=>{if(updateSpeechVoices().length)done()};
+  synth.addEventListener?.('voiceschanged',changed);timer=window.setTimeout(done,timeout);
+ });
+}
+function scheduleSpeech(callback,delay){
+ const timer=window.setTimeout(()=>{speechTimers.delete(timer);callback()},delay);speechTimers.add(timer);
+}
+function cancelSpeech(){
+ speechGeneration++;speechTimers.forEach(timer=>clearTimeout(timer));speechTimers.clear();speechUtterances.clear();window.speechSynthesis?.cancel();
+}
 function playTone(type){
  if(!audioContext||audioContext.state!=='running')return;
  const frequencies=type==='complete'?[660,880,1100]:[type==='rest'?390:type==='move'?620:880];
@@ -221,8 +249,20 @@ function playTone(type){
 }
 function speak(text,interrupt=false){
  if(!('speechSynthesis' in window)||!text)return;
- if(interrupt)window.speechSynthesis.cancel();
- const utterance=new SpeechSynthesisUtterance(text);utterance.lang='zh-CN';utterance.rate=1.25;utterance.volume=1;window.speechSynthesis.speak(utterance);
+ if(interrupt)cancelSpeech();
+ const generation=speechGeneration,synth=window.speechSynthesis;
+ const attempt=retried=>{
+  if(generation!==speechGeneration)return;
+  const utterance=new SpeechSynthesisUtterance(text),voice=preferredChineseVoice();
+  utterance.lang='zh-CN';utterance.rate=1.25;utterance.volume=1;if(voice)utterance.voice=voice;
+  let started=false,handled=false,watchdog;
+  const cleanup=()=>{clearTimeout(watchdog);speechUtterances.delete(utterance)};
+  const retry=()=>{if(handled)return;handled=true;cleanup();if(!retried&&generation===speechGeneration){synth.cancel();scheduleSpeech(()=>attempt(true),180)}};
+  utterance.onstart=()=>{started=true;clearTimeout(watchdog)};utterance.onend=()=>{handled=true;cleanup()};utterance.onerror=retry;
+  speechUtterances.add(utterance);synth.resume();synth.speak(utterance);
+  if(interrupt&&!retried)watchdog=window.setTimeout(()=>{if(!started)retry()},1200);
+ };
+ scheduleSpeech(()=>attempt(false),180);
 }
 async function requestWakeLock(){
  if(!('wakeLock' in navigator)){$('timerNotice').textContent='当前浏览器不支持屏幕常亮，请暂时关闭手机自动锁屏。';return}
@@ -233,7 +273,7 @@ async function releaseWakeLock(){if(wakeLock){await wakeLock.release().catch(()=
 async function startTimer(){
  const config=currentRuntimeConfig(),choiceName=timerChoiceName(),base=timerSetup.item[2];
  data.timerPrefs[timerSetup.key]={choice:base.mode==='choice'?choiceName:null,sets:config.sets,reps:config.reps,work:config.work,rest:config.rest};save();
- await prepareAudio();requestWakeLock();
+ await prepareAudio();await prepareSpeech();requestWakeLock();
  const steps=buildTimerSteps(config,choiceName),total=steps.reduce((sum,step)=>sum+step.duration,0);
  timerSession={steps,index:-1,remaining:0,deadline:0,interval:null,paused:false,completed:false,doneDuration:0,total,current:null,announced:new Set()};
  $('timerSetup').hidden=true;$('timerRunning').hidden=false;$('timerRunning').className='timer-running';$('timerPauseButton').hidden=false;$('timerPauseButton').textContent='暂停';$('timerStopButton').textContent='提前结束';
@@ -260,7 +300,7 @@ function tickTimer(){
 }
 function pauseTimer(auto=false){
  if(!timerSession||timerSession.paused||timerSession.completed)return;
- timerSession.remaining=Math.max(0,(timerSession.deadline-performance.now())/1000);timerSession.paused=true;clearInterval(timerSession.interval);window.speechSynthesis?.cancel();releaseWakeLock();
+ timerSession.remaining=Math.max(0,(timerSession.deadline-performance.now())/1000);timerSession.paused=true;clearInterval(timerSession.interval);cancelSpeech();releaseWakeLock();
  $('timerRunning').classList.add('is-paused');$('timerPhase').textContent='已暂停';$('timerPauseButton').textContent='继续';
  $('timerNotice').textContent=auto?'页面进入后台，计时已自动暂停。返回后点“继续”。':'计时已暂停，准备好后继续。';
  if(!auto){playTone('rest');speak('已暂停',true)}
@@ -277,7 +317,7 @@ function finishTimer(){
  timerSetup.checkbox.checked=true;data.draft[timerSetup.draftId]=true;save();timerSetup.label.classList.add('checked');toggleComplete();
 }
 function clearTimer(){
- if(timerSession?.interval)clearInterval(timerSession.interval);timerSession=null;window.speechSynthesis?.cancel();releaseWakeLock();
+ if(timerSession?.interval)clearInterval(timerSession.interval);timerSession=null;cancelSpeech();releaseWakeLock();
 }
 function closeTimer(){
  if(timerSession&&!timerSession.completed&&!confirm('计时尚未完成，确定提前结束吗？本项目不会自动勾选。'))return;
@@ -299,5 +339,6 @@ $('timerDialog').addEventListener('cancel',event=>{event.preventDefault();closeT
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&timerSession&&!timerSession.paused&&!timerSession.completed)pauseTimer(true)});
 window.addEventListener('pagehide',()=>{if(timerSession&&!timerSession.completed)pauseTimer(true)});
 
+if('speechSynthesis' in window){updateSpeechVoices();window.speechSynthesis.addEventListener?.('voiceschanged',updateSpeechVoices)}
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js'));
 update();

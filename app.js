@@ -137,7 +137,7 @@ function timerChoiceName(){
 }
 function openTimer(item,key,checkbox,label,draftId){
  timerSetup={item,key,checkbox,label,draftId};
- prepareSpeech();
+ prepareAudio();prepareSpeech();
  const pref=data.timerPrefs[key]||{},base=item[2];
  $('timerTitle').textContent=item[0];$('timerSetup').hidden=false;$('timerRunning').hidden=true;
  $('timerChoiceLabel').hidden=base.mode!=='choice';$('timerChoice').innerHTML='';
@@ -237,7 +237,8 @@ function scheduleSpeech(callback,delay){
  const timer=window.setTimeout(()=>{speechTimers.delete(timer);callback()},delay);speechTimers.add(timer);
 }
 function cancelSpeech(){
- speechGeneration++;speechTimers.forEach(timer=>clearTimeout(timer));speechTimers.clear();speechUtterances.clear();window.speechSynthesis?.cancel();
+ const synth=window.speechSynthesis,hasActiveSpeech=speechTimers.size||speechUtterances.size||synth?.speaking||synth?.pending;
+ speechGeneration++;speechTimers.forEach(timer=>clearTimeout(timer));speechTimers.clear();speechUtterances.clear();if(hasActiveSpeech)synth?.cancel();
 }
 function playTone(type){
  if(!audioContext||audioContext.state!=='running')return;
@@ -247,7 +248,7 @@ function playTone(type){
   oscillator.frequency.value=frequency;oscillator.type='sine';gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(.16,start+.015);gain.gain.exponentialRampToValueAtTime(.0001,start+.13);oscillator.connect(gain).connect(audioContext.destination);oscillator.start(start);oscillator.stop(start+.14);
  });
 }
-function speak(text,interrupt=false){
+function speak(text,interrupt=false,immediate=false){
  if(!('speechSynthesis' in window)||!text)return;
  if(interrupt)cancelSpeech();
  const generation=speechGeneration,synth=window.speechSynthesis;
@@ -262,7 +263,7 @@ function speak(text,interrupt=false){
   speechUtterances.add(utterance);synth.resume();synth.speak(utterance);
   if(interrupt&&!retried)watchdog=window.setTimeout(()=>{if(!started)retry()},1200);
  };
- scheduleSpeech(()=>attempt(false),180);
+ if(immediate)attempt(false);else scheduleSpeech(()=>attempt(false),180);
 }
 async function requestWakeLock(){
  if(!('wakeLock' in navigator)){$('timerNotice').textContent='当前浏览器不支持屏幕常亮，请暂时关闭手机自动锁屏。';return}
@@ -270,23 +271,23 @@ async function requestWakeLock(){
 }
 async function releaseWakeLock(){if(wakeLock){await wakeLock.release().catch(()=>{});wakeLock=null}}
 
-async function startTimer(){
+function startTimer(){
  const config=currentRuntimeConfig(),choiceName=timerChoiceName(),base=timerSetup.item[2];
  data.timerPrefs[timerSetup.key]={choice:base.mode==='choice'?choiceName:null,sets:config.sets,reps:config.reps,work:config.work,rest:config.rest};save();
- await prepareAudio();await prepareSpeech();requestWakeLock();
+ prepareAudio();prepareSpeech();requestWakeLock();
  const steps=buildTimerSteps(config,choiceName),total=steps.reduce((sum,step)=>sum+step.duration,0);
  timerSession={steps,index:-1,remaining:0,deadline:0,interval:null,paused:false,completed:false,doneDuration:0,total,current:null,announced:new Set()};
  $('timerSetup').hidden=true;$('timerRunning').hidden=false;$('timerRunning').className='timer-running';$('timerPauseButton').hidden=false;$('timerPauseButton').textContent='暂停';$('timerStopButton').textContent='提前结束';
- advanceTimerStep();
+ advanceTimerStep(true);
 }
-function advanceTimerStep(){
+function advanceTimerStep(immediateSpeech=false){
  if(!timerSession||timerSession.paused)return;
  if(timerSession.current)timerSession.doneDuration+=timerSession.current.duration;
  timerSession.index++;
  if(timerSession.index>=timerSession.steps.length){finishTimer();return}
  const step=timerSession.steps[timerSession.index];timerSession.current=step;timerSession.remaining=step.duration;timerSession.deadline=performance.now()+step.duration*1000;timerSession.announced=new Set();
  $('timerPhase').textContent=step.phase;$('timerMeta').textContent=step.meta;$('timerRunning').className='timer-running'+(['rest','switch'].includes(step.kind)?' is-rest':'');
- playTone(step.tone);speak(step.speech,['rest','switch','prepare'].includes(step.kind));
+ playTone(step.tone);speak(step.speech,['rest','switch','prepare'].includes(step.kind),immediateSpeech);
  clearInterval(timerSession.interval);timerSession.interval=window.setInterval(tickTimer,100);tickTimer();
 }
 function tickTimer(){
@@ -303,12 +304,12 @@ function pauseTimer(auto=false){
  timerSession.remaining=Math.max(0,(timerSession.deadline-performance.now())/1000);timerSession.paused=true;clearInterval(timerSession.interval);cancelSpeech();releaseWakeLock();
  $('timerRunning').classList.add('is-paused');$('timerPhase').textContent='已暂停';$('timerPauseButton').textContent='继续';
  $('timerNotice').textContent=auto?'页面进入后台，计时已自动暂停。返回后点“继续”。':'计时已暂停，准备好后继续。';
- if(!auto){playTone('rest');speak('已暂停',true)}
+ if(!auto){playTone('rest');speak('已暂停',true,true)}
 }
-async function resumeTimer(){
+function resumeTimer(){
  if(!timerSession||!timerSession.paused)return;
- await prepareAudio();await requestWakeLock();timerSession.paused=false;timerSession.deadline=performance.now()+timerSession.remaining*1000;
- $('timerRunning').classList.remove('is-paused');$('timerPhase').textContent=timerSession.current.phase;$('timerPauseButton').textContent='暂停';playTone('start');speak('继续',true);timerSession.interval=window.setInterval(tickTimer,100);tickTimer();
+ prepareAudio();requestWakeLock();timerSession.paused=false;timerSession.deadline=performance.now()+timerSession.remaining*1000;
+ $('timerRunning').classList.remove('is-paused');$('timerPhase').textContent=timerSession.current.phase;$('timerPauseButton').textContent='暂停';playTone('start');speak('继续',true,true);timerSession.interval=window.setInterval(tickTimer,100);tickTimer();
 }
 function finishTimer(){
  if(!timerSession)return;

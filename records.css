@@ -1,0 +1,17 @@
+/* All visual changes are scoped to the new, initially hidden surfaces. */
+.app-version{touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.record-dialog .hint{margin-top:10px}
+.record-dialog input{font-size:16px}
+.record-actions{display:flex;gap:12px;margin-top:18px;align-items:center}
+.record-actions .small-button{min-width:70px;min-height:44px}
+.record-message{min-height:24px;margin-top:10px;font-size:14px;color:var(--red)}
+.record-page header{gap:16px;justify-content:flex-start}
+.record-page .record-back{min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--blue)}
+.record-list{display:flex;flex-direction:column;gap:12px}
+.record-row{display:grid;grid-template-columns:44px minmax(0,1fr) 48px;align-items:start;gap:6px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 6px}
+.record-number{min-width:44px;min-height:44px;padding:10px 0;border:0;background:transparent;color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+.record-row textarea{display:block;resize:vertical;width:100%;min-height:44px;padding:9px 8px;border:1px solid var(--line);border-radius:8px;font:16px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--dark);background:#fff}
+.record-row .small-button{min-height:44px;padding:10px 0}
+.record-add{width:100%;margin-top:15px;min-height:48px;border:1px dashed #aed1d6;border-radius:11px;background:var(--pale);color:var(--blue)}
+.record-status{min-height:24px;margin:12px 0;color:var(--muted);font-size:13px}
+.record-status.is-error{color:var(--red)}

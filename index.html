@@ -8,15 +8,16 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="训练打卡">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+  <link rel="icon" href="icons/icon-32.png" type="image/png" sizes="32x32">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="records.css">
   <title>居家训练打卡</title>
 </head>
 <body>
   <main class="shell">
     <header>
-      <div><p class="eyebrow">居家增肌 · 关节保护</p><h1>训练打卡 <span class="app-version">1.1</span></h1></div>
+      <div><p class="eyebrow">居家增肌 · 关节保护</p><h1>训练打卡 <span class="app-version">1.2</span></h1></div>
       <button id="settingsButton" class="icon-button" aria-label="设置">⚙</button>
     </header>
 
@@ -86,6 +87,25 @@
       </div>
     </div>
   </dialog>
+  <dialog id="recordCheckDialog" class="record-dialog" aria-labelledby="recordCheckTitle">
+    <form id="recordCheckForm" class="dialog-content" autocomplete="off">
+      <h2 id="recordCheckTitle">训练数据校验</h2>
+      <p id="recordCheckDescription" class="hint">用于检查本地训练记录及计划数据。</p>
+      <label id="recordCheckLabel"><span class="record-input-label">校验日期</span><input id="recordCheckInput" type="text" inputmode="numeric" placeholder="输入校验日期（格式20260512）" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+      <label id="recordConfirmLabel" hidden>再次输入6位校验数字<input id="recordConfirmInput" type="password" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+      <p id="recordCheckMessage" class="record-message" role="status"></p>
+      <p id="recordCheckResult" hidden>检测完成，当前训练数据正常，无须修复。</p>
+      <div class="record-actions"><button id="recordCheckCancel" class="small-button" type="button">取消</button><button id="recordCheckSubmit" class="primary" type="submit">开始检测</button></div>
+    </form>
+  </dialog>
+  <main id="recordPage" class="shell record-page" hidden>
+    <header><button id="recordBack" class="record-back" type="button">返回</button><h1>记录</h1></header>
+    <div id="recordList" class="record-list"></div>
+    <button id="recordAdd" class="record-add" type="button">+ 添加一条</button>
+    <p id="recordStatus" class="record-status" role="status"></p>
+  </main>
   <script src="app.js"></script>
+  <script src="record-store.js"></script>
+  <script src="hidden-records.js"></script>
 </body>
 </html>

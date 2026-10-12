@@ -1,5 +1,5 @@
-const CACHE='training-checkin-v8';
-const ASSETS=['./','./index.html','./style.css','./app.js','./manifest.webmanifest','./icon.svg'];
+const CACHE='training-checkin-v12';
+const ASSETS=['./','./index.html','./style.css','./app.js','./record-store.js','./hidden-records.js','./records.css','./manifest.webmanifest','./icons/icon-32.png','./icons/icon-180.png','./icons/icon-192.png','./icons/icon-512.png'];
 
 self.addEventListener('install',event=>event.waitUntil(
  caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())
